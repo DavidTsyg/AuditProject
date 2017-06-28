@@ -6,9 +6,8 @@ echo ''
 
 read answer
 
-if [$answer == "yes"]
-then
-   ip = 'hostname -I'
+case $answer in
+   y|Y|yes|YES ) ip = 'hostname -I'
    # Here we are getting the packages we need
    sudo apt-get update
    sudo apt-get install openvpn easy-rsa
@@ -40,5 +39,6 @@ then
    cp /usr/share/doc/openvpn/examples/sample-config-files/client.conf ~/client-configs/base.conf
    cp make_config.sh ~/client-configs/make_config.sh
    chmod 700 ~/client-configs/make_config.sh
-   ~/client-configs/make_config.sh client1
-fi
+   ~/client-configs/make_config.sh client1;;
+   * ) echo "Installaton Finished";;
+esac
