@@ -2,7 +2,7 @@
 echo "This script is intended for dedicated openvpn servers."
 echo "Be careful, as it can mess up your existing servers."
 echo "Type in 'yes' if you want to proceed with the installation."
-echo '\n'
+echo ''
 
 read answer
 
