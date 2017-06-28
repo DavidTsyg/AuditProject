@@ -12,6 +12,7 @@ then
    # Here we are getting the packages we need
    sudo apt-get update
    sudo apt-get install openvpn easy-rsa
+   sudo apt-get install ssh-server ssh-client
    make-cadir ~/openvpn-ca
    cp vars ~/openvpn-ca
    source ~/openvpn-ca/vars
