@@ -13,6 +13,7 @@ case $answer in
    sudo apt-get install openvpn easy-rsa
    sudo apt-get install ssh-server ssh-client
    make-cadir ~/openvpn-ca
+   sudo chown david ~/openvpn-ca
    cp vars ~/openvpn-ca
    source ~/openvpn-ca/vars
    ~/openvpn-ca/clean-all
