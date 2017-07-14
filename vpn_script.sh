@@ -11,7 +11,6 @@ iptables -t filter -P INPUT ACCEPT
 iptables -t filter -P OUTPUT ACCEPT
 iptables -t filter -P FORWARD ACCEPT
 
-
 #Creating iptables for VPN tunnels
 ip route flush table VPN1
 ip route flush table VPN2
@@ -19,13 +18,9 @@ ip route flush table VPN3
 ip route flush table VPN4
 
 ip route add default dev tun0 via 10.8.1.5 table VPN1
-ip route add 10.8.1.1/32 via 10.8.1.5 table VPN1
 ip route add default dev tun1 via 10.8.2.5 table VPN2
-ip route add 10.8.2.1/32 via 10.8.2.5 table VPN2
 ip route add default dev tun2 via 10.8.3.5 table VPN3
-ip route add 10.8.3.1/32 via 10.8.3.5 table VPN3
 ip route add default dev tun3 via 10.8.4.5 table VPN4
-ip route add 10.8.4.1/32 via 10.8.4.5 table VPN4
 
 #Marking the tunnels
 iprule del from all fwmark 1 2>/dev/null
@@ -58,7 +53,6 @@ iptables -t mangle -A CONNMARK4 -j CONNMARK --save-mark
 
 #This is for established connections
 iptables -t mangle -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j CONNMARK --restore-mark
-
 
 #This is for new connections
 iptables -t mangle -A OUTPUT -m conntrack --ctstate NEW \
