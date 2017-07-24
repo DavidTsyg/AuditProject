@@ -75,6 +75,9 @@
         src: /home/david/AuditProject/sysctl.conf 
         dest: /etc/sysctl.conf
 
+    - name: Adjust sysctl
+      shell: sysctl -p
+
     - name: Copy before.rules
       copy: 
         src: /home/david/AuditProject/before.rules 
@@ -90,7 +93,7 @@
       copy: 
         src: /home/david/AuditProject/ufw 
         dest: /etc/default/ufw
-
+  
     - name: Open the ports
       shell: ufw allow 443/udp
       
@@ -122,7 +125,7 @@
       replace:
         path: /client-configs/base.conf
         regexp: 'remote 0.0.0.0 1194'
-        replace: 'remote 10.8.{{ansible_ens33.ipv4.address[11:]}}.0 443'
+        replace: 'remote {{ansible_ens33.ipv4.address}} 443'
 
     - name: Copy the make_config file
       shell: cp /openvpn-ca/make_config.sh /client-configs/make_config.sh
@@ -133,14 +136,16 @@
     - name: Copy client config creation script
       copy:
         src: /etc/ansible/create_client_config.sh
-        dest: /openvpn-ca
+        dest: /client-configs
+  
+    - name: Enable the config file to run
+      shell: chmod 700 /client-configs/create_client_config.sh
 
     - name: generate the client ovpn file
-      shell: /openvpn-ca/create_client_config.sh
+      shell: /client-configs/create_client_config.sh
      
     - name: fetch the client config from the server
       fetch: 
-        src: /client-configs/client{{ansible_ens33.ipv4.address}}.ovpn  
-        dest: /
-
+        src: /client-configs/files/client{{ansible_ens33.ipv4.address}}.ovpn  
+        dest: /home/david/client{{ansible_ens33.ipv4.address}}.ovpn 
 
