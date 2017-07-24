@@ -1,0 +1,146 @@
+---
+
+- hosts: all
+  serial: 1
+  remote_user: root
+  tasks:      
+    - name: Add the host
+      add_host: 
+        name: "{{ ansible_ens33.ipv4.address }}"
+
+    - name: Install openvpn and easy-rsa
+      apt: pkg={{item}} update_cache=true cache_valid_time=3600
+      with_items:
+        - openvpn
+        - easy-rsa
+      
+    - name: Create openvpn-ca directory
+      shell: make-cadir /openvpn-ca
+
+    - copy: 
+        src: /home/david/AuditProject/base.conf
+        dest: /openvpn-ca
+    - copy: 
+        src: /home/david/AuditProject/before.rules 
+        dest: /openvpn-ca
+    - copy: 
+        src: /home/david/AuditProject/make_config.sh
+        dest: /openvpn-ca
+    - copy: 
+        src: /home/david/AuditProject/server.conf 
+        dest: /openvpn-ca
+    - copy: 
+        src: /home/david/AuditProject/sysctl.conf
+        dest: /openvpn-ca
+    - copy:
+        src: /home/david/AuditProject/ufw
+        dest: /openvpn-ca
+    - copy: 
+        src: /home/david/AuditProject/vars
+        dest: /openvpn-ca
+    - copy:
+        src: /etc/ansible/build-ca_input
+        dest: /openvpn-ca
+    - copy:
+        src: /etc/ansible/build-key-server_input
+        dest: /openvpn-ca
+    - copy:
+        src: /etc/ansible/build-authority_script.sh
+        dest: /openvpn-ca
+
+    - name: Permit the script to run
+      shell: chmod 700 /openvpn-ca/build-authority_script.sh
+
+    - name: Build certificate authority
+      shell: /openvpn-ca/build-authority_script.sh
+
+    - name: Copy the keys
+      shell: cp /openvpn-ca/keys/ca.crt /openvpn-ca/keys/ca.key /openvpn-ca/keys/server.crt /openvpn-ca/keys/server.key /openvpn-ca/keys/ta.key /openvpn-ca/keys/dh2048.pem /etc/openvpn
+      
+    - name: Copy the server config
+      shell: cp /openvpn-ca/server.conf /etc/openvpn/server.conf 
+     
+    - name: Make the needed changes 
+      replace:
+        path: /etc/openvpn/server.conf
+        regexp: 'port 1194'
+        replace: 'port 443'
+    - replace:
+        path: /etc/openvpn/server.conf
+        regexp: 'server 10.8.0.0 255.255.255.0'
+        replace: 'server 10.8.{{ansible_ens33.ipv4.address[11:]}}.0 255.255.255.0'
+     
+    - name: Replace the sysctl.conf
+      copy: 
+        src: /home/david/AuditProject/sysctl.conf 
+        dest: /etc/sysctl.conf
+
+    - name: Copy before.rules
+      copy: 
+        src: /home/david/AuditProject/before.rules 
+        dest: /etc/ufw/before.rules
+      
+    - name: Change before.rules
+      replace:
+        path: /etc/ufw/before.rules
+        regexp: '-A POSTROUTING -s 10.8.0.0/8 -o ens33 -j MASQUERADE'
+        replace: '-A POSTROUTING -s 10.8.{{ansible_ens33.ipv4.address[11:]}}.0/8 -o ens33 -j MASQUERADE'
+
+    - name: Copy the ufw
+      copy: 
+        src: /home/david/AuditProject/ufw 
+        dest: /etc/default/ufw
+
+    - name: Open the ports
+      shell: ufw allow 443/udp
+      
+    - name: Allow ssh
+      shell: ufw allow OpenSSH
+      
+    - name: disable ufw     
+      shell: ufw disable
+      
+    - name: enable ufw   
+      shell: ufw enable
+       
+    - name: Start the openvpn server
+      shell: systemctl start openvpn@server
+      
+    - name: Enable the openvpn server
+      shell: systemctl enable openvpn@server
+      
+    - name: Create client config directory
+      shell: mkdir -p /client-configs/files
+
+    - name: Protect the client configs 
+      shell: chmod 700 /client-configs/files
+
+    - name: Copy the base configuration  
+      shell: cp /openvpn-ca/base.conf /client-configs/base.conf
+
+    - name: Replace the ip address in file
+      replace:
+        path: /client-configs/base.conf
+        regexp: 'remote 0.0.0.0 1194'
+        replace: 'remote 10.8.{{ansible_ens33.ipv4.address[11:]}}.0 443'
+
+    - name: Copy the make_config file
+      shell: cp /openvpn-ca/make_config.sh /client-configs/make_config.sh
+
+    - name: Protect the config file
+      shell: chmod 700 /client-configs/make_config.sh
+
+    - name: Copy client config creation script
+      copy:
+        src: /etc/ansible/create_client_config.sh
+        dest: /openvpn-ca
+
+    - name: generate the client ovpn file
+      shell: /openvpn-ca/create_client_config.sh
+     
+    - name: fetch the client config from the server
+      fetch: 
+        src: /client-configs/client{{ansible_ens33.ipv4.address}}.ovpn  
+        dest: /
+
+
