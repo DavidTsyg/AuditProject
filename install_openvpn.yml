@@ -3,17 +3,18 @@
 - hosts: all
   serial: 1
   remote_user: root
-  tasks:      
-    - name: Add the host
-      add_host: 
-        name: "{{ ansible_ens33.ipv4.address }}"
+  tasks:  
+
+    - name: Disable ufw     
+      ufw:
+        state: disabled     
 
     - name: Install openvpn and easy-rsa
       apt: pkg={{item}} update_cache=true cache_valid_time=3600
       with_items:
         - openvpn
-        - easy-rsa
-      
+        - easy-rsa 
+
     - name: Create openvpn-ca directory
       shell: make-cadir /openvpn-ca
 
@@ -100,18 +101,6 @@
     - name: Allow ssh
       shell: ufw allow OpenSSH
       
-    - name: disable ufw     
-      shell: ufw disable
-      
-    - name: enable ufw   
-      shell: ufw enable
-       
-    - name: Start the openvpn server
-      shell: systemctl start openvpn@server
-      
-    - name: Enable the openvpn server
-      shell: systemctl enable openvpn@server
-      
     - name: Create client config directory
       shell: mkdir -p /client-configs/files
 
@@ -141,11 +130,30 @@
     - name: Enable the config file to run
       shell: chmod 700 /client-configs/create_client_config.sh
 
-    - name: generate the client ovpn file
+    - name: Generate the client ovpn file
       shell: /client-configs/create_client_config.sh
      
-    - name: fetch the client config from the server
+    - name: Fetch the client config from the server
       fetch: 
         src: /client-configs/files/client{{ansible_ens33.ipv4.address}}.ovpn  
-        dest: /home/david/client{{ansible_ens33.ipv4.address}}.ovpn 
+        dest: /home/david/
+        flat: yes 
+    
+    - name: Add the host's ip address to hosts file
+      shell: /etc/ansible/add_host.py {{ ansible_ens33.ipv4.address }}
+      delegate_to: localhost
+
+    - name: Enable ufw       
+      ufw:
+        state: enabled 
+      notify:
+      - start openvpn
+
+  handlers:
+    - name: start openvpn
+      service: 
+        name: openvpn@server
+        state: started
+
+
 
